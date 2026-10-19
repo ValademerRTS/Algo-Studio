@@ -64,7 +64,7 @@ const INITIAL_ALGOS = [
 ];
 
 function activate(context) {
-    const CURRENT_VERSION = 1;
+    const CURRENT_VERSION = 2;
     const savedVersion = context.globalState.get('algo_db_version', 0);
     if (savedVersion < CURRENT_VERSION) {
         context.globalState.update('algorithms', INITIAL_ALGOS);
@@ -88,10 +88,246 @@ function activate(context) {
     );
     context.subscriptions.push(completionProvider);
 
+    let currentPanel = undefined;
+
     const openCommand = vscode.commands.registerCommand('algoHelper.openManager', () => {
-        vscode.window.showInformationMessage('Algo Manager доступен через Webview интерфейс.');
+        if (currentPanel) {
+            currentPanel.reveal(vscode.ViewColumn.Beside);
+            return;
+        }
+
+        currentPanel = vscode.window.createWebviewPanel(
+            'algoManager',
+            'Algo Studio',
+            vscode.ViewColumn.Beside,
+            { enableScripts: true, retainContextWhenHidden: true }
+        );
+
+        const currentData = context.globalState.get('algorithms', INITIAL_ALGOS);
+        currentPanel.webview.html = getWebviewContent(currentData);
+
+        currentPanel.webview.onDidReceiveMessage(async message => {
+            let list = context.globalState.get('algorithms', INITIAL_ALGOS);
+            switch (message.command) {
+                case 'save': {
+                    const idx = list.findIndex(item => item.id === message.algo.id);
+                    if (idx >= 0) {
+                        list[idx] = message.algo;
+                    } else {
+                        list.unshift({ ...message.algo, id: Date.now().toString() });
+                    }
+                    await context.globalState.update('algorithms', list);
+                    currentPanel?.webview.postMessage({ command: 'load', data: list });
+                    vscode.window.showInformationMessage(`Алгоритм "${message.algo.name}" сохранен`);
+                    break;
+                }
+                case 'delete': {
+                    list = list.filter(item => item.id !== message.id);
+                    await context.globalState.update('algorithms', list);
+                    currentPanel?.webview.postMessage({ command: 'load', data: list });
+                    vscode.window.showInformationMessage('Алгоритм удален');
+                    break;
+                }
+                case 'copy': {
+                    await vscode.env.clipboard.writeText(message.code);
+                    vscode.window.showInformationMessage('Код скопирован в буфер обмена');
+                    break;
+                }
+                case 'reset_defaults': {
+                    await context.globalState.update('algorithms', INITIAL_ALGOS);
+                    currentPanel?.webview.postMessage({ command: 'load', data: INITIAL_ALGOS });
+                    vscode.window.showInformationMessage('Базовые алгоритмы восстановлены');
+                    break;
+                }
+            }
+        }, undefined, context.subscriptions);
+
+        currentPanel.onDidDispose(() => {
+            currentPanel = undefined;
+        });
     });
+
     context.subscriptions.push(openCommand);
+}
+
+function getWebviewContent(initialData) {
+    const jsonString = JSON.stringify(initialData || INITIAL_ALGOS);
+
+    return `<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algo Studio</title>
+<style>
+    body { font-family: var(--vscode-font-family, sans-serif); color: var(--vscode-foreground); background: var(--vscode-editor-background); padding: 16px; margin: 0; }
+    .card { background: var(--vscode-editorWidget-background); border: 1px solid var(--vscode-widget-border, #333); border-radius: 8px; padding: 14px; margin-bottom: 12px; }
+    input, textarea, select { width: 100%; box-sizing: border-box; background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border, #444); padding: 8px; border-radius: 6px; margin-top: 4px; margin-bottom: 8px; font-family: inherit; }
+    textarea { font-family: monospace; }
+    button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 7px 14px; border-radius: 6px; cursor: pointer; margin-right: 6px; font-size: 13px; font-weight: 500; }
+    button:hover { background: var(--vscode-button-hoverBackground); }
+    .btn-secondary { background: var(--vscode-button-secondaryBackground, #444); color: var(--vscode-button-secondaryForeground, #fff); }
+    .btn-danger { background: var(--vscode-errorForeground, #d9534f); color: #fff; }
+    .preview-img { max-width: 100%; max-height: 220px; border-radius: 6px; margin-top: 8px; border: 1px solid var(--vscode-widget-border, #444); display: block; }
+    pre { background: var(--vscode-textCodeBlock-background, #141416); padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 12px; }
+</style>
+</head>
+<body>
+    <div class="card">
+        <h3 id="formTitle" style="margin-top:0;">Добавить / Редактировать алгоритм</h3>
+        <input type="hidden" id="algoId">
+        <label>Название:</label>
+        <input type="text" id="algoName">
+        <label>Язык:</label>
+        <select id="algoLang">
+            <option value="cpp">C++</option>
+            <option value="python">Python</option>
+            <option value="java">Java</option>
+            <option value="javascript">JavaScript</option>
+        </select>
+        <label>Сложность:</label>
+        <input type="text" id="algoComplexity">
+        <label>Категория:</label>
+        <input type="text" id="algoCategory">
+        <label>Описание:</label>
+        <input type="text" id="algoDesc">
+        <label>Код реализации:</label>
+        <textarea id="algoCode" rows="6"></textarea>
+        <label>Изображение:</label>
+        <input type="file" id="algoFile" accept="image/*">
+        <div id="filePreviewContainer"></div>
+        <div style="margin-top: 10px;">
+            <button onclick="saveAlgo()">Сохранить</button>
+            <button class="btn-secondary" onclick="resetForm()">Очистить</button>
+            <button class="btn-secondary" onclick="resetToDefaults()">Сбросить к базовым</button>
+        </div>
+    </div>
+
+    <h3>Список алгоритмов</h3>
+    <div id="algoList"></div>
+
+<script>
+    const vscode = acquireVsCodeApi();
+    let algos = ${jsonString};
+    let currentImageBase64 = '';
+
+    document.getElementById('algoFile').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                currentImageBase64 = event.target.result;
+                document.getElementById('filePreviewContainer').innerHTML = '<img class="preview-img" src="' + currentImageBase64 + '">';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function saveAlgo() {
+        const name = document.getElementById('algoName').value.trim();
+        const code = document.getElementById('algoCode').value;
+        const lang = document.getElementById('algoLang').value;
+        const complexity = document.getElementById('algoComplexity').value.trim();
+        const category = document.getElementById('algoCategory').value.trim();
+        const desc = document.getElementById('algoDesc').value.trim();
+        const id = document.getElementById('algoId').value;
+
+        if (!name || !code) {
+            alert('Заполните название и код');
+            return;
+        }
+
+        vscode.postMessage({
+            command: 'save',
+            algo: { id, name, lang, complexity, category, description: desc, code, image: currentImageBase64 }
+        });
+        resetForm();
+    }
+
+    function resetForm() {
+        document.getElementById('algoId').value = '';
+        document.getElementById('algoName').value = '';
+        document.getElementById('algoDesc').value = '';
+        document.getElementById('algoCode').value = '';
+        document.getElementById('algoComplexity').value = '';
+        document.getElementById('algoCategory').value = '';
+        document.getElementById('algoFile').value = '';
+        currentImageBase64 = '';
+        document.getElementById('filePreviewContainer').innerHTML = '';
+        document.getElementById('formTitle').innerText = 'Добавить / Редактировать алгоритм';
+    }
+
+    function editAlgo(id) {
+        const a = algos.find(x => x.id === id);
+        if (!a) return;
+        document.getElementById('algoId').value = a.id;
+        document.getElementById('algoName').value = a.name;
+        document.getElementById('algoLang').value = a.lang || 'cpp';
+        document.getElementById('algoComplexity').value = a.complexity || '';
+        document.getElementById('algoCategory').value = a.category || '';
+        document.getElementById('algoDesc').value = a.description || '';
+        document.getElementById('algoCode').value = a.code;
+        currentImageBase64 = a.image || '';
+        document.getElementById('filePreviewContainer').innerHTML = currentImageBase64 ? '<img class="preview-img" src="' + currentImageBase64 + '">' : '';
+        document.getElementById('formTitle').innerText = 'Редактировать: ' + a.name;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function deleteAlgo(id) {
+        if (confirm('Удалить этот алгоритм?')) {
+            vscode.postMessage({ command: 'delete', id });
+        }
+    }
+
+    function copyCode(id) {
+        const a = algos.find(x => x.id === id);
+        if (a) {
+            vscode.postMessage({ command: 'copy', code: a.code });
+        }
+    }
+
+    function resetToDefaults() {
+        if (confirm('Восстановить базовые алгоритмы?')) {
+            vscode.postMessage({ command: 'reset_defaults' });
+        }
+    }
+
+    window.addEventListener('message', event => {
+        if (event.data.command === 'load') {
+            algos = event.data.data;
+            renderList();
+        }
+    });
+
+    function escapeHtml(str) {
+        return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function renderList() {
+        const container = document.getElementById('algoList');
+        container.innerHTML = '';
+        algos.forEach(a => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = \`
+                <div><strong>\${escapeHtml(a.name)}</strong> [\${escapeHtml(a.lang || 'cpp')}] \${escapeHtml(a.complexity || '')}</div>
+                <div style="font-size:12px; color:var(--vscode-descriptionForeground); margin:4px 0 8px;">\${escapeHtml(a.description || '')}</div>
+                <pre><code>\${escapeHtml(a.code)}</code></pre>
+                \${a.image ? '<img class="preview-img" src="' + a.image + '">' : ''}
+                <div style="margin-top: 8px;">
+                    <button onclick="copyCode('\${a.id}')">Копировать</button>
+                    <button class="btn-secondary" onclick="editAlgo('\${a.id}')">Редактировать</button>
+                    <button class="btn-danger" onclick="deleteAlgo('\${a.id}')">Удалить</button>
+                </div>
+            \`;
+            container.appendChild(card);
+        });
+    }
+
+    renderList();
+</script>
+</body>
+</html>`;
 }
 
 function deactivate() {}
