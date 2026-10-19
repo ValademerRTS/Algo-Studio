@@ -1,0 +1,28 @@
+{
+  "name": "algo-studio",
+  "displayName": "Algo Studio",
+  "description": "Smart Algorithm Snippets and Catalog for VS Code",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Snippets",
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:cpp",
+    "onLanguage:c",
+    "onLanguage:python",
+    "onCommand:algoHelper.openManager"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "algoHelper.openManager",
+        "title": "Algo Studio: Open Manager"
+      }
+    ]
+  }
+}
