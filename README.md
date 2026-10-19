@@ -49,9 +49,9 @@
    
 2. Откройте проект в VS Code:
 
-```Bash
-code .
-```
+    ```Bash
+    code .
+    ```
 
 3. Нажмите F5 для запуска нового окна VS Code (Extension Development Host) с активированным расширением
 
