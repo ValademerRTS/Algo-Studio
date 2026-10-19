@@ -37,7 +37,7 @@ const INITIAL_ALGOS = [
         lang: 'cpp',
         complexity: 'O(log N)',
         category: 'Поиск',
-        description: 'Бинарный поиск в отсортированном массиве',
+        description: 'Бинарный поиск элемента в отсортированном массиве',
         code: `int binarySearch(const int arr[], int n, int target) {\n    int l = 0, r = n - 1;\n    while (l <= r) {\n        int mid = l + (r - l) / 2;\n        if (arr[mid] == target) return mid;\n        if (arr[mid] < target) l = mid + 1;\n        else r = mid - 1;\n    }\n    return -1;\n}`,
         image: ''
     },
@@ -47,7 +47,7 @@ const INITIAL_ALGOS = [
         lang: 'cpp',
         complexity: 'O(N log log N)',
         category: 'Математика',
-        description: 'Поиск простых чисел до N',
+        description: 'Поиск всех простых чисел до N',
         code: `std::vector<bool> sieve(int n) {\n    std::vector<bool> is_prime(n + 1, true);\n    is_prime[0] = is_prime[1] = false;\n    for (int i = 2; i * i <= n; i++) {\n        if (is_prime[i]) {\n            for (int j = i * i; j <= n; j += i) {\n                is_prime[j] = false;\n            }\n        }\n    }\n    return is_prime;\n}`,
         image: ''
     },
@@ -57,7 +57,7 @@ const INITIAL_ALGOS = [
         lang: 'cpp',
         complexity: 'O(1)',
         category: 'Массивы',
-        description: 'Сумма на отрезке за O(1)',
+        description: 'Сумма на любом подотрезке за O(1)',
         code: `std::vector<long long> buildPrefixSums(const std::vector<int>& arr) {\n    int n = arr.size();\n    std::vector<long long> pref(n + 1, 0);\n    for (int i = 0; i < n; i++) {\n        pref[i + 1] = pref[i] + arr[i];\n    }\n    return pref;\n}\n\nlong long getRangeSum(const std::vector<long long>& pref, int l, int r) {\n    return pref[r + 1] - pref[l];\n}`,
         image: ''
     }
@@ -100,10 +100,11 @@ function activate(context) {
             'algoManager',
             'Algo Studio',
             vscode.ViewColumn.Beside,
-            { enableScripts: true }
+            { enableScripts: true, retainContextWhenHidden: true }
         );
 
-        currentPanel.webview.html = getWebviewContent(context.globalState.get('algorithms', INITIAL_ALGOS));
+        const currentData = context.globalState.get('algorithms', INITIAL_ALGOS);
+        currentPanel.webview.html = getWebviewContent(currentData);
 
         currentPanel.webview.onDidReceiveMessage(async message => {
             let list = context.globalState.get('algorithms', INITIAL_ALGOS);
@@ -116,26 +117,26 @@ function activate(context) {
                         list.unshift({ ...message.algo, id: Date.now().toString() });
                     }
                     await context.globalState.update('algorithms', list);
-                    currentPanel.webview.postMessage({ command: 'load', data: list });
-                    vscode.window.showInformationMessage(`Алгоритм "${message.algo.name}" сохранен.`);
+                    currentPanel?.webview.postMessage({ command: 'load', data: list });
+                    vscode.window.showInformationMessage(`Алгоритм "${message.algo.name}" сохранен`);
                     break;
                 }
                 case 'delete': {
                     list = list.filter(item => item.id !== message.id);
                     await context.globalState.update('algorithms', list);
-                    currentPanel.webview.postMessage({ command: 'load', data: list });
-                    vscode.window.showInformationMessage('Алгоритм удален.');
+                    currentPanel?.webview.postMessage({ command: 'load', data: list });
+                    vscode.window.showInformationMessage('Алгоритм удален');
                     break;
                 }
                 case 'copy': {
                     await vscode.env.clipboard.writeText(message.code);
-                    vscode.window.showInformationMessage('Код скопирован в буфер обмена.');
+                    vscode.window.showInformationMessage('Код скопирован в буфер обмена');
                     break;
                 }
                 case 'reset_defaults': {
                     await context.globalState.update('algorithms', INITIAL_ALGOS);
-                    currentPanel.webview.postMessage({ command: 'load', data: INITIAL_ALGOS });
-                    vscode.window.showInformationMessage('Базовые алгоритмы восстановлены.');
+                    currentPanel?.webview.postMessage({ command: 'load', data: INITIAL_ALGOS });
+                    vscode.window.showInformationMessage('Базовые алгоритмы восстановлены');
                     break;
                 }
             }
@@ -156,229 +157,445 @@ function getWebviewContent(initialData) {
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Algo Studio</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
 <style>
-    *, *::before, *::after {
-        box-sizing: border-box;
+    :root {
+        --theme-accent: #cc785c;
+        --theme-accent-hover: #b8654a;
+        --theme-accent-soft: rgba(204, 120, 92, 0.15);
+        --theme-bg: var(--vscode-editor-background, #18181b);
+        --theme-card: var(--vscode-editorWidget-background, #222226);
+        --theme-border: rgba(255, 255, 255, 0.08);
+        --theme-text: var(--vscode-foreground, #f4f4f5);
+        --theme-muted: #9ca3af;
+        --theme-code-bg: #141416;
+        --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.18);
+        --shadow-md: 0 8px 24px -4px rgba(0, 0, 0, 0.35);
+        --shadow-hover: 0 12px 32px -4px rgba(204, 120, 92, 0.22);
     }
 
+    * { box-sizing: border-box; }
     body {
-        font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
-        font-size: var(--vscode-font-size, 13px);
-        line-height: 1.45;
-        color: var(--vscode-foreground);
-        background-color: var(--vscode-editor-background);
-        padding: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        color: var(--theme-text);
+        background: var(--theme-bg);
+        margin: 0;
+        padding: 24px;
+        line-height: 1.5;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--theme-border);
+    }
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .brand-logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #d97757, #cc785c);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: white;
+        font-size: 19px;
+        box-shadow: 0 4px 12px rgba(204, 120, 92, 0.4);
+    }
+    .brand-title {
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+        margin: 0;
+    }
+    .brand-sub {
+        font-size: 12px;
+        color: var(--theme-muted);
         margin: 0;
     }
 
-    h3 {
-        font-size: 13px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--vscode-foreground);
-        margin: 0 0 12px 0;
+    .toolbar {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
     }
-
-    label {
-        display: block;
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        color: var(--vscode-descriptionForeground);
-        margin: 8px 0 4px;
+    .search-box {
+        flex: 1;
+        min-width: 220px;
+        position: relative;
     }
-
-    input[type="text"],
-    select,
-    textarea {
+    .search-box input {
         width: 100%;
-        background-color: var(--vscode-input-background);
-        color: var(--vscode-input-foreground);
-        border: 1px solid var(--vscode-input-border, transparent);
-        border-radius: 3px;
-        padding: 6px 8px;
-        font-size: 13px;
-        font-family: inherit;
+        background: var(--theme-card);
+        border: 1px solid var(--theme-border);
+        border-radius: 10px;
+        padding: 10px 14px;
+        color: var(--theme-text);
+        font-size: 14px;
         outline: none;
-        transition: border-color 0.1s ease;
+        transition: all 0.2s ease;
+        box-shadow: var(--shadow-sm);
+    }
+    .search-box input:focus {
+        border-color: var(--theme-accent);
+        box-shadow: 0 0 0 3px var(--theme-accent-soft);
     }
 
-    input[type="text"]:focus,
-    select:focus,
-    textarea:focus {
-        border-color: var(--vscode-focusBorder);
-    }
-
-    input[type="file"] {
-        font-size: 12px;
-        color: var(--vscode-descriptionForeground);
-        margin-top: 4px;
-    }
-
-    textarea {
-        font-family: var(--vscode-editor-font-family, Consolas, monospace);
-        font-size: 12px;
-        line-height: 1.4;
-        resize: vertical;
-        min-height: 90px;
-    }
-
-    button {
-        display: inline-flex;
+    .filter-pills {
+        display: flex;
+        gap: 6px;
         align-items: center;
-        justify-content: center;
-        height: 28px;
-        padding: 0 12px;
-        border: 1px solid transparent;
-        border-radius: 2px;
-        background-color: var(--vscode-button-background);
-        color: var(--vscode-button-foreground);
+    }
+    .pill {
+        background: var(--theme-card);
+        border: 1px solid var(--theme-border);
+        color: var(--theme-muted);
+        padding: 6px 14px;
+        border-radius: 20px;
         font-size: 12px;
         font-weight: 500;
         cursor: pointer;
-        user-select: none;
+        transition: all 0.2s;
+    }
+    .pill:hover, .pill.active {
+        background: var(--theme-accent-soft);
+        color: var(--theme-accent);
+        border-color: var(--theme-accent);
     }
 
-    button:hover {
-        background-color: var(--vscode-button-hoverBackground);
+    .btn {
+        background: var(--theme-accent);
+        color: white;
+        border: none;
+        padding: 9px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(204, 120, 92, 0.3);
     }
-
-    button:focus {
-        outline: 1px solid var(--vscode-focusBorder);
-        outline-offset: 1px;
+    .btn:hover {
+        background: var(--theme-accent-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 14px rgba(204, 120, 92, 0.4);
     }
-
     .btn-secondary {
-        background-color: var(--vscode-button-secondaryBackground);
-        color: var(--vscode-button-secondaryForeground);
+        background: var(--theme-card);
+        color: var(--theme-text);
+        border: 1px solid var(--theme-border);
+        box-shadow: var(--shadow-sm);
     }
-
     .btn-secondary:hover {
-        background-color: var(--vscode-button-secondaryHoverBackground);
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--theme-muted);
     }
-
     .btn-danger {
-        background-color: transparent;
-        color: var(--vscode-errorForeground, #f48771);
-        border: 1px solid rgba(244, 135, 113, 0.3);
+        background: transparent;
+        color: #ef4444;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        box-shadow: none;
     }
-
     .btn-danger:hover {
-        background-color: rgba(244, 135, 113, 0.12);
+        background: rgba(239, 68, 68, 0.12);
+        border-color: #ef4444;
     }
 
-    .card {
-        background-color: var(--vscode-editorWidget-background);
-        border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.2));
-        border-radius: 4px;
-        padding: 12px 14px;
+    .form-wrapper {
+        background: var(--theme-card);
+        border: 1px solid var(--theme-border);
+        border-radius: 14px;
+        padding: 20px;
+        margin-bottom: 24px;
+        box-shadow: var(--shadow-md);
+        display: none;
+        animation: fadeIn 0.3s ease;
+    }
+    .form-wrapper.open { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr;
+        gap: 12px;
         margin-bottom: 12px;
     }
-
-    .badge {
-        display: inline-block;
-        padding: 2px 6px;
-        border-radius: 3px;
-        font-size: 10px;
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group label {
+        font-size: 12px;
         font-weight: 600;
-        letter-spacing: 0.3px;
-        background-color: var(--vscode-badge-background);
-        color: var(--vscode-badge-foreground);
-        margin-left: 4px;
-        vertical-align: middle;
+        color: var(--theme-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    input[type="text"], select, textarea {
+        background: var(--theme-bg);
+        border: 1px solid var(--theme-border);
+        border-radius: 8px;
+        padding: 9px 12px;
+        color: var(--theme-text);
+        font-size: 13px;
+        outline: none;
+        transition: border 0.2s;
+    }
+    input[type="text"]:focus, select:focus, textarea:focus {
+        border-color: var(--theme-accent);
+    }
+    textarea {
+        font-family: 'Consolas', 'Fira Code', monospace;
+        resize: vertical;
     }
 
+    .algo-grid {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .card {
+        background: var(--theme-card);
+        border: 1px solid var(--theme-border);
+        border-radius: 14px;
+        padding: 18px 20px;
+        box-shadow: var(--shadow-sm);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+    }
+    .card:hover {
+        border-color: rgba(204, 120, 92, 0.4);
+        box-shadow: var(--shadow-hover);
+        transform: translateY(-2px);
+    }
+    .card-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 10px;
+    }
+    .card-title {
+        font-size: 17px;
+        font-weight: 700;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .badge {
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 8px;
+        border-radius: 6px;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+    }
+    .badge-lang {
+        background: #1e3a5f;
+        color: #60a5fa;
+        border: 1px solid rgba(96, 165, 250, 0.3);
+    }
+    .badge-complexity {
+        background: #2e261f;
+        color: #f59e0b;
+        border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-cat {
+        background: rgba(204, 120, 92, 0.15);
+        color: var(--theme-accent);
+    }
+    .card-desc {
+        color: var(--theme-muted);
+        font-size: 13px;
+        margin: 0 0 14px 0;
+    }
+
+    .code-container {
+        position: relative;
+        border-radius: 10px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        background: var(--theme-code-bg);
+    }
+    .code-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 6px 14px;
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        font-size: 11px;
+        color: var(--theme-muted);
+    }
+    .mac-dots {
+        display: flex;
+        gap: 5px;
+    }
+    .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+    }
+    .dot-r { background: #ef4444; }
+    .dot-y { background: #f59e0b; }
+    .dot-g { background: #10b981; }
+
     pre {
-        background-color: var(--vscode-textCodeBlock-background);
-        border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.15));
-        border-radius: 3px;
-        padding: 8px 10px;
-        margin: 8px 0;
+        margin: 0;
+        padding: 14px;
         overflow-x: auto;
-        font-family: var(--vscode-editor-font-family, Consolas, monospace);
-        font-size: 12px;
+        font-size: 12.5px;
+        font-family: 'Consolas', 'Fira Code', Monaco, monospace;
         line-height: 1.45;
+        max-height: 240px;
+    }
+    pre code.hljs {
+        background: transparent !important;
+        padding: 0 !important;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 8px;
+        margin-top: 14px;
+        justify-content: flex-end;
     }
 
     .preview-img {
         max-width: 100%;
         max-height: 220px;
-        object-fit: contain;
+        border-radius: 8px;
+        margin-top: 12px;
+        border: 1px solid var(--theme-border);
         display: block;
-        margin: 8px 0;
-        border-radius: 3px;
-        border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.2));
     }
 
-    .filter-panel {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 14px;
+    .copy-btn {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: var(--theme-text);
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
     }
-    .filter-panel input {
-        flex: 1;
-        margin: 0; 
-    }
-
-    .filter-panel select {
-        width: 130px;
-        margin: 0;
+    .copy-btn:hover {
+        background: var(--theme-accent);
+        color: white;
     }
 </style>
 </head>
 <body>
-    <div class="card">
-        <h3 id="formTitle" style="margin-top:0;">Добавить / Редактировать алгоритм</h3>
-        <input type="hidden" id="algoId">
-        <label>Название:</label>
-        <input type="text" id="algoName">
-        <label>Язык:</label>
-        <select id="algoLang">
-            <option value="cpp">C++</option>
-            <option value="python">Python</option>
-            <option value="c">C</option>
-            <option value="java">Java</option>
-            <option value="javascript">JavaScript</option>
-        </select>
-        <label>Сложность:</label>
-        <input type="text" id="algoComplexity" placeholder="например: O(N log N)">
-        <label>Категория:</label>
-        <input type="text" id="algoCategory" placeholder="например: Сортировка">
-        <label>Описание:</label>
-        <input type="text" id="algoDesc">
-        <label>Код:</label>
-        <textarea id="algoCode" rows="6"></textarea>
-        <label>Изображение:</label>
-        <input type="file" id="algoFile" accept="image/*">
-        <div id="filePreviewContainer"></div>
-        <div style="margin-top: 8px;">
-            <button onclick="saveAlgo()">Сохранить</button>
-            <button class="btn-secondary" onclick="resetForm()">Очистить форму</button>
-            <button class="btn-secondary" onclick="resetToDefaults()">Сбросить к базовым</button>
+
+    <div class="header">
+        <div class="brand">
+            <div class="brand-logo">A</div>
+            <div>
+                <h1 class="brand-title">Algo Studio</h1>
+                <p class="brand-sub">Каталог и сниппеты алгоритмов</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 8px;">
+            <button class="btn btn-secondary" onclick="toggleForm()">Новый алгоритм</button>
+            <button class="btn btn-secondary" onclick="resetToDefaults()">Сброс</button>
         </div>
     </div>
 
-    <h3>Список алгоритмов</h3>
-    <div class="filter-panel">
-        <input type="text" id="searchInput" placeholder="Поиск по названию, описанию, тегам..." oninput="filterAlgos()">
-        <select id="langFilter" onchange="filterAlgos()">
-            <option value="all">Все языки</option>
-            <option value="cpp">C++</option>
-            <option value="python">Python</option>
-            <option value="c">C</option>
-            <option value="java">Java</option>
-            <option value="javascript">JavaScript</option>
-        </select>
+    <div class="toolbar">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Поиск по названию, сложности, категории..." oninput="filterAlgos()">
+        </div>
+        <div class="filter-pills">
+            <div class="pill active" onclick="setLangFilter('all', this)">Все</div>
+            <div class="pill" onclick="setLangFilter('cpp', this)">C++</div>
+            <div class="pill" onclick="setLangFilter('python', this)">Python</div>
+            <div class="pill" onclick="setLangFilter('java', this)">Java</div>
+        </div>
     </div>
 
-    <div id="algoList"></div>
+    <div class="form-wrapper" id="formWrapper">
+        <h3 id="formTitle" style="margin-top: 0; font-size: 16px;">Добавить новый алгоритм</h3>
+        <input type="hidden" id="algoId">
+        
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Название:</label>
+                <input type="text" id="algoName">
+            </div>
+            <div class="form-group">
+                <label>Язык:</label>
+                <select id="algoLang">
+                    <option value="cpp">C++</option>
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="javascript">JavaScript</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Сложность:</label>
+                <input type="text" id="algoComplexity" placeholder="O(N log N)">
+            </div>
+        </div>
+
+        <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+            <div class="form-group">
+                <label>Категория:</label>
+                <input type="text" id="algoCategory" placeholder="Сортировка, Графы...">
+            </div>
+            <div class="form-group">
+                <label>Описание:</label>
+                <input type="text" id="algoDesc">
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 12px;">
+            <label>Исходный код:</label>
+            <textarea id="algoCode" rows="6"></textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+            <label>Иллюстрация (опционально):</label>
+            <input type="file" id="algoFile" accept="image/*">
+            <div id="filePreviewContainer"></div>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+            <button class="btn" onclick="saveAlgo()">Сохранить</button>
+            <button class="btn btn-secondary" onclick="toggleForm(false)">Отмена</button>
+        </div>
+    </div>
+
+    <div id="algoList" class="algo-grid"></div>
 
 <script>
     const vscode = acquireVsCodeApi();
     let algos = ${jsonString};
     let currentImageBase64 = '';
+    let selectedLang = 'all';
+
+    function toggleForm(open) {
+        const fw = document.getElementById('formWrapper');
+        if (open !== undefined) {
+            fw.classList.toggle('open', open);
+        } else {
+            fw.classList.toggle('open');
+        }
+        if (!fw.classList.contains('open')) resetForm();
+    }
 
     document.getElementById('algoFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -386,7 +603,8 @@ function getWebviewContent(initialData) {
             const reader = new FileReader();
             reader.onload = function(event) {
                 currentImageBase64 = event.target.result;
-                document.getElementById('filePreviewContainer').innerHTML = '<img class="preview-img" src="' + currentImageBase64 + '">';
+                document.getElementById('filePreviewContainer').innerHTML = 
+                    '<img class="preview-img" src="' + currentImageBase64 + '">';
             };
             reader.readAsDataURL(file);
         }
@@ -410,20 +628,20 @@ function getWebviewContent(initialData) {
             command: 'save',
             algo: { id, name, lang, complexity, category, description: desc, code, image: currentImageBase64 }
         });
-        resetForm();
+        toggleForm(false);
     }
 
     function resetForm() {
         document.getElementById('algoId').value = '';
         document.getElementById('algoName').value = '';
-        document.getElementById('algoComplexity').value = '';
-        document.getElementById('algoCategory').value = '';
         document.getElementById('algoDesc').value = '';
         document.getElementById('algoCode').value = '';
+        document.getElementById('algoComplexity').value = '';
+        document.getElementById('algoCategory').value = '';
         document.getElementById('algoFile').value = '';
         currentImageBase64 = '';
         document.getElementById('filePreviewContainer').innerHTML = '';
-        document.getElementById('formTitle').innerText = 'Добавить / Редактировать алгоритм';
+        document.getElementById('formTitle').innerText = 'Добавить новый алгоритм';
     }
 
     function editAlgo(id) {
@@ -437,8 +655,10 @@ function getWebviewContent(initialData) {
         document.getElementById('algoDesc').value = a.description || '';
         document.getElementById('algoCode').value = a.code;
         currentImageBase64 = a.image || '';
-        document.getElementById('filePreviewContainer').innerHTML = currentImageBase64 ? '<img class="preview-img" src="' + currentImageBase64 + '">' : '';
+        document.getElementById('filePreviewContainer').innerHTML = currentImageBase64 
+            ? '<img class="preview-img" src="' + currentImageBase64 + '">' : '';
         document.getElementById('formTitle').innerText = 'Редактировать: ' + a.name;
+        toggleForm(true);
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -448,10 +668,15 @@ function getWebviewContent(initialData) {
         }
     }
 
-    function copyCode(id) {
+    function copyCode(id, btn) {
         const a = algos.find(x => x.id === id);
         if (a) {
             vscode.postMessage({ command: 'copy', code: a.code });
+            const oldText = btn.innerHTML;
+            btn.innerHTML = 'Скопировано';
+            setTimeout(() => {
+                btn.innerHTML = oldText;
+            }, 1800);
         }
     }
 
@@ -461,21 +686,25 @@ function getWebviewContent(initialData) {
         }
     }
 
+    function setLangFilter(lang, el) {
+        selectedLang = lang;
+        document.querySelectorAll('.filter-pills .pill').forEach(p => p.classList.remove('active'));
+        el.classList.add('active');
+        filterAlgos();
+    }
+
     function filterAlgos() {
         const query = (document.getElementById('searchInput').value || '').toLowerCase().trim();
-        const selectedLang = document.getElementById('langFilter').value;
-
         const filtered = algos.filter(a => {
             const matchesQuery = !query || 
-                (a.name || '').toLowerCase().includes(query) ||
-                (a.description || '').toLowerCase().includes(query) ||
-                (a.complexity || '').toLowerCase().includes(query) ||
-                (a.category || '').toLowerCase().includes(query);
+                                 (a.name || '').toLowerCase().includes(query) ||
+                                 (a.description || '').toLowerCase().includes(query) ||
+                                 (a.complexity || '').toLowerCase().includes(query) ||
+                                 (a.category || '').toLowerCase().includes(query);
             const matchesLang = selectedLang === 'all' || (a.lang || 'cpp').toLowerCase() === selectedLang;
             return matchesQuery && matchesLang;
         });
-
-        renderList(filtered);
+        renderCards(filtered);
     }
 
     window.addEventListener('message', event => {
@@ -486,40 +715,64 @@ function getWebviewContent(initialData) {
     });
 
     function escapeHtml(str) {
-        return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return (str || '').replace(/&/g, '&amp;')
+                          .replace(/</g, '&lt;')
+                          .replace(/>/g, '&gt;');
     }
 
-    function renderList(listToRender) {
-        const list = listToRender !== undefined ? listToRender : algos;
+    function renderCards(list) {
         const container = document.getElementById('algoList');
         container.innerHTML = '';
 
-        if (list.length === 0) {
-            container.innerHTML = '<div style="color:var(--vscode-descriptionForeground); padding: 10px 0;">Ничего не найдено</div>';
+        if (!list || list.length === 0) {
+            container.innerHTML = '<div style="text-align:center; padding: 40px; color: var(--theme-muted);">Ничего не найдено</div>';
             return;
         }
 
         list.forEach(a => {
             const card = document.createElement('div');
             card.className = 'card';
+            const langClass = 'language-' + (a.lang || 'cpp');
+
             card.innerHTML = \`
-                <div>
-                    <strong>\${escapeHtml(a.name)}</strong>
-                    <span class="badge">\${escapeHtml((a.lang || 'cpp').toUpperCase())}</span>
-                    \${a.complexity ? '<span class="badge">' + escapeHtml(a.complexity) + '</span>' : ''}
-                    \${a.category ? '<span class="badge">' + escapeHtml(a.category) + '</span>' : ''}
+                <div class="card-top">
+                    <div>
+                        <h2 class="card-title">
+                            \${escapeHtml(a.name)}
+                            <span class="badge badge-lang">\${escapeHtml((a.lang || 'cpp').toUpperCase())}</span>
+                            \${a.complexity ? '<span class="badge badge-complexity">' + escapeHtml(a.complexity) + '</span>' : ''}
+                            \${a.category ? '<span class="badge badge-cat">' + escapeHtml(a.category) + '</span>' : ''}
+                        </h2>
+                    </div>
                 </div>
-                <div style="font-size:12px; color:var(--vscode-descriptionForeground); margin:4px 0;">\${escapeHtml(a.description || '')}</div>
-                <pre><code>\${escapeHtml(a.code)}</code></pre>
+
+                <p class="card-desc">\${escapeHtml(a.description || '')}</p>
+
+                <div class="code-container">
+                    <div class="code-header">
+                        <div class="mac-dots">
+                            <div class="dot dot-r"></div>
+                            <div class="dot dot-y"></div>
+                            <div class="dot dot-g"></div>
+                        </div>
+                        <button class="copy-btn" onclick="copyCode('\${a.id}', this)">Скопировать код</button>
+                    </div>
+                    <pre><code class="\${langClass}">\${escapeHtml(a.code)}</code></pre>
+                </div>
+
                 \${a.image ? '<img class="preview-img" src="' + a.image + '">' : ''}
-                <div style="margin-top: 8px;">
-                    <button onclick="copyCode('\${a.id}')">Копировать</button>
-                    <button class="btn-secondary" onclick="editAlgo('\${a.id}')">Редактировать</button>
-                    <button class="btn-danger" onclick="deleteAlgo('\${a.id}')">Удалить</button>
+
+                <div class="card-actions">
+                    <button class="btn btn-secondary" onclick="editAlgo('\${a.id}')">Редактировать</button>
+                    <button class="btn btn-danger" onclick="deleteAlgo('\${a.id}')">Удалить</button>
                 </div>
             \`;
             container.appendChild(card);
         });
+
+        if (window.hljs) {
+            document.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+        }
     }
 
     filterAlgos();
