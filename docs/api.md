@@ -90,9 +90,6 @@ Algo Studio — расширение для Visual Studio Code, объединя
    ```bash
    npm install -g @vscode/vsce
    ```
-   ```bash
-   npm install -g @vscode/vsce
-   ```
 2. Собрать установочный пакет:
    ```bash
    vsce package
