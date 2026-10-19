@@ -3,67 +3,1054 @@ const vscode = require('vscode');
 const INITIAL_ALGOS = [
     {
         id: '1',
-        name: 'Quick Sort',
-        lang: 'cpp',
-        complexity: 'O(N log N)',
-        category: 'Сортировка',
-        description: 'Быстрая сортировка Хоара (медиана трех)',
-        code: `void QuickSort(int arr[], int l, int r) {\n    if (l >= r) return;\n\n    int mi = (l + r) / 2;\n    if (arr[l] > arr[mi]) std::swap(arr[l], arr[mi]);\n    if (arr[l] > arr[r]) std::swap(arr[l], arr[r]);\n    if (arr[mi] > arr[r]) std::swap(arr[mi], arr[r]);\n    \n    int i = l, j = r;\n    int mid = arr[mi];\n\n    while (true) {\n        while (arr[i] < mid) i++;\n        while (arr[j] > mid) j--;\n        if (i >= j) break;\n        std::swap(arr[i], arr[j]);\n        i++;\n        j--;\n    }\n\n    QuickSort(arr, l, j);\n    QuickSort(arr, j + 1, r);\n}`,
+        name: 'Linear Search',
+        lang: 'python',
+        complexity: 'O(N)',
+        category: 'Поиск',
+        description: 'Применяется для поиска индекса элемента в произвольном неотсортированном списке путем последовательного перебора всех значений.',
+        code: `def linear_search(arr, target):
+    for i in range(len(arr)):
+        if arr[i] == target:
+            return i
+    return -1`,
         image: ''
     },
     {
         id: '2',
-        name: 'Merge Sort',
-        lang: 'cpp',
-        complexity: 'O(N log N)',
-        category: 'Сортировка',
-        description: 'Сортировка слиянием и подсчет инверсий',
-        code: `long long MergeCount(int arr[], int res[], int l, int r) {\n    if (l + 1 >= r) return 0;\n\n    int mid = (l + r) / 2;\n    long long ans = 0;\n\n    ans += MergeCount(arr, res, l, mid);\n    ans += MergeCount(arr, res, mid, r);\n\n    int i = l, j = mid, k = l;\n    while (i < mid && j < r) {\n        if (arr[i] <= arr[j]) {\n            res[k++] = arr[i++];\n        } else {\n            ans += mid - i;\n            res[k++] = arr[j++];\n        }\n    }\n\n    while (i < mid) res[k++] = arr[i++];\n    while (j < r) res[k++] = arr[j++];\n\n    for (int t = l; t < r; t++) arr[t] = res[t];\n    return ans;\n}`,
+        name: 'Binary Search',
+        lang: 'python',
+        complexity: 'O(log N)',
+        category: 'Поиск',
+        description: 'Применяется для быстрого нахождения элемента в строго отсортированном массиве путем деления диапазона поиска пополам на каждом шаге.',
+        code: `def binary_search(arr, target):
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1`,
         image: ''
     },
     {
         id: '3',
-        name: 'Counting Sort',
-        lang: 'cpp',
-        complexity: 'O(N + K)',
-        category: 'Сортировка',
-        description: 'Сортировка подсчетом за линейное время',
-        code: `void countingSort(int arr[], int n, int maxVal) {\n    std::vector<int> count(maxVal + 1, 0);\n    for (int i = 0; i < n; i++) {\n        count[arr[i]]++;\n    }\n    int idx = 0;\n    for (int val = 0; val <= maxVal; val++) {\n        while (count[val] > 0) {\n            arr[idx++] = val;\n            count[val]--;\n        }\n    }\n}`,
+        name: 'Find Min Max',
+        lang: 'python',
+        complexity: 'O(N)',
+        category: 'Массивы',
+        description: 'Используется для нахождения граничных (наименьшего и наибольшего) значений в наборе данных за один проход.',
+        code: `def find_min_max(arr):
+    if not arr:
+        return None, None
+    min_val = max_val = arr[0]
+    for x in arr[1:]:
+        if x < min_val:
+            min_val = x
+        elif x > max_val:
+            max_val = x
+    return min_val, max_val`,
         image: ''
     },
     {
         id: '4',
-        name: 'Binary Search',
-        lang: 'cpp',
-        complexity: 'O(log N)',
-        category: 'Поиск',
-        description: 'Бинарный поиск элемента в отсортированном массиве',
-        code: `int binarySearch(const int arr[], int n, int target) {\n    int l = 0, r = n - 1;\n    while (l <= r) {\n        int mid = l + (r - l) / 2;\n        if (arr[mid] == target) return mid;\n        if (arr[mid] < target) l = mid + 1;\n        else r = mid - 1;\n    }\n    return -1;\n}`,
+        name: 'Calculate Average',
+        lang: 'python',
+        complexity: 'O(N)',
+        category: 'Массивы',
+        description: 'Применяется в статистических расчетах для вычисления центральной тенденции числового ряда.',
+        code: `def calculate_average(arr):
+    if not arr:
+        return 0.0
+    total = 0
+    for x in arr:
+        total += x
+    return total / len(arr)`,
         image: ''
     },
     {
         id: '5',
-        name: 'Решето Эратосфена',
-        lang: 'cpp',
-        complexity: 'O(N log log N)',
-        category: 'Математика',
-        description: 'Поиск всех простых чисел до N',
-        code: `std::vector<bool> sieve(int n) {\n    std::vector<bool> is_prime(n + 1, true);\n    is_prime[0] = is_prime[1] = false;\n    for (int i = 2; i * i <= n; i++) {\n        if (is_prime[i]) {\n            for (int j = i * i; j <= n; j += i) {\n                is_prime[j] = false;\n            }\n        }\n    }\n    return is_prime;\n}`,
+        name: 'Reverse Array',
+        lang: 'python',
+        complexity: 'O(N)',
+        category: 'Массивы',
+        description: 'Используется для изменения порядка элементов на противоположный без выделения дополнительной памяти.',
+        code: `def reverse_array(arr):
+    left, right = 0, len(arr) - 1
+    while left < right:
+        arr[left], arr[right] = arr[right], arr[left]
+        left += 1
+        right -= 1
+    return arr`,
         image: ''
     },
     {
         id: '6',
-        name: 'Префиксные суммы',
+        name: 'Palindrome Check',
+        lang: 'python',
+        complexity: 'O(N)',
+        category: 'Строки',
+        description: 'Служит для проверки, читается ли строка одинаково слева направо и справа налево (для обработки текста и валидации данных).',
+        code: `def is_palindrome(s):
+    left, right = 0, len(s) - 1
+    while left < right:
+        if s[left] != s[right]:
+            return False
+        left += 1
+        right -= 1
+    return True`,
+        image: ''
+    },
+    {
+        id: '7',
+        name: 'Factorial',
+        lang: 'python',
+        complexity: 'O(N)',
+        category: 'Математика',
+        description: 'Применяется в комбинаторике и теории вероятностей для подсчета количества возможных перестановок N элементов.',
+        code: `def factorial(n):
+    if n < 0:
+        return None
+    res = 1
+    for i in range(2, n + 1):
+        res *= i
+    return res`,
+        image: ''
+    },
+    {
+        id: '8',
+        name: 'Fibonacci',
+        lang: 'python',
+        complexity: 'O(N)',
+        category: 'Математика',
+        description: 'Используется для моделирования процессов роста, в алгоритмах планирования и динамическом программировании.',
+        code: `def fibonacci(n):
+    if n <= 0:
+        return 0
+    elif n == 1:
+        return 1
+    a, b = 0, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b`,
+        image: ''
+    },
+    {
+        id: '9',
+        name: 'Greatest Common Divisor (GCD)',
+        lang: 'python',
+        complexity: 'O(log(min(A, B)))',
+        category: 'Математика',
+        description: 'Алгоритм Евклида. Используется для сокращения дробей, криптографии и нахождения периодов циклических процессов.',
+        code: `def gcd(a, b):
+    while b != 0:
+        a, b = b, a % b
+    return a`,
+        image: ''
+    },
+    {
+        id: '10',
+        name: 'Least Common Multiple (LCM)',
+        lang: 'python',
+        complexity: 'O(log(min(A, B)))',
+        category: 'Математика',
+        description: 'Применяется для приведения дробей к общему знаменателю и вычисления циклов синхронизации независимых событий.',
+        code: `def lcm(a, b):
+    def gcd(x, y):
+        while y != 0:
+            x, y = y, x % y
+        return x
+    return (a * b) // gcd(a, b) if a and b else 0`,
+        image: ''
+    },
+    {
+        id: '11',
+        name: 'Is Prime',
+        lang: 'python',
+        complexity: 'O(sqrt(N))',
+        category: 'Математика',
+        description: 'Используется в криптографии и алгоритмах факторизации для проверки отсутствия делителей числа кроме 1 и самого себя.',
+        code: `def is_prime(n):
+    if n <= 1:
+        return False
+    if n <= 3:
+        return True
+    if n % 2 == 0 or n % 3 == 0:
+        return False
+    i = 5
+    while i * i <= n:
+        if n % i == 0 or n % (i + 2) == 0:
+            return False
+        i += 6
+    return True`,
+        image: ''
+    },
+    {
+        id: '12',
+        name: 'Sum of Digits',
+        lang: 'python',
+        complexity: 'O(log10 N)',
+        category: 'Математика',
+        description: 'Применяется для вычисления контрольных сумм идентификаторов, хеширования и признаков делимости чисел.',
+        code: `def sum_of_digits(n):
+    n = abs(n)
+    total = 0
+    while n > 0:
+        total += n % 10
+        n //= 10
+    return total`,
+        image: ''
+    },
+    {
+        id: '13',
+        name: 'Decimal to Binary',
+        lang: 'python',
+        complexity: 'O(log2 N)',
+        category: 'Математика',
+        description: 'Служит для представления десятичных чисел в двоичной форме для битовых операций и работы с низкоуровневыми данными.',
+        code: `def decimal_to_binary(n):
+    if n == 0:
+        return "0"
+    res = []
+    is_neg = n < 0
+    n = abs(n)
+    while n > 0:
+        res.append(str(n % 2))
+        n //= 2
+    if is_neg:
+        res.append("-")
+    return "".join(reversed(res))`,
+        image: ''
+    },
+    {
+        id: '14',
+        name: 'Binary Exponentiation',
+        lang: 'python',
+        complexity: 'O(log P)',
+        category: 'Математика',
+        description: 'Используется для эффективного вычисления больших степеней чисел за счет многократного возведения основания в квадрат.',
+        code: `def power(base, exp):
+    res = 1
+    b = base
+    e = exp
+    while e > 0:
+        if e % 2 == 1:
+            res *= b
+        b *= b
+        e //= 2
+    return res`,
+        image: ''
+    },
+    {
+        id: '15',
+        name: 'Sieve of Eratosthenes',
+        lang: 'python',
+        complexity: 'O(N log log N)',
+        category: 'Математика',
+        description: 'Позволяет найти все простые числа до заданного предела N за один проход, отсеивая составные числа через кратные.',
+        code: `def sieve_of_eratosthenes(limit):
+    primes = []
+    is_prime = [True] * (limit + 1)
+    is_prime[0] = is_prime[1] = False
+    for p in range(2, int(limit**0.5) + 1):
+        if is_prime[p]:
+            for i in range(p * p, limit + 1, p):
+                is_prime[i] = False
+    for p in range(2, limit + 1):
+        if is_prime[p]:
+            primes.append(p)
+    return primes`,
+        image: ''
+    },
+    {
+        id: '16',
+        name: 'Leap Year Check',
+        lang: 'python',
+        complexity: 'O(1)',
+        category: 'Математика',
+        description: 'Используется в календарях и планировщиках для корректного расчета количества дней в феврале (28 или 29).',
+        code: `def is_leap_year(year):
+    if year % 400 == 0:
+        return True
+    if year % 100 == 0:
+        return False
+    return year % 4 == 0`,
+        image: ''
+    },
+    {
+        id: '17',
+        name: 'Count Vowels',
+        lang: 'python',
+        complexity: 'O(N)',
+        category: 'Строки',
+        description: 'Применяется в анализе текста, лингвистических метриках и определении сложности восприятия текстового контента.',
+        code: `def count_vowels(s):
+    vowels = set("aeiouyаеёиоуыэюяAEIOUYАЕЁИОУЫЭЮЯ")
+    count = 0
+    for char in s:
+        if char in vowels:
+            count += 1
+    return count`,
+        image: ''
+    },
+    {
+        id: '18',
+        name: 'Bubble Sort',
+        lang: 'javascript',
+        complexity: 'O(N^2)',
+        category: 'Сортировка',
+        description: 'Служит для базового упорядочивания небольших массивов путем попарного сравнения и всплытия максимального элемента в конец.',
+        code: `function bubbleSort(arr) {
+    let n = arr.length;
+    for (let i = 0; i < n - 1; i++) {
+        let swapped = false;
+        for (let j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                let temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+                swapped = true;
+            }
+        }
+        if (!swapped) break;
+    }
+    return arr;
+}`,
+        image: ''
+    },
+    {
+        id: '19',
+        name: 'Selection Sort',
+        lang: 'javascript',
+        complexity: 'O(N^2)',
+        category: 'Сортировка',
+        description: 'Применяется для сортировки с минимальным количеством операций физической перезаписи элементов в памяти.',
+        code: `function selectionSort(arr) {
+    let n = arr.length;
+    for (let i = 0; i < n - 1; i++) {
+        let minIdx = i;
+        for (let j = i + 1; j < n; j++) {
+            if (arr[j] < arr[minIdx]) {
+                minIdx = j;
+            }
+        }
+        if (minIdx !== i) {
+            let temp = arr[i];
+            arr[i] = arr[minIdx];
+            arr[minIdx] = temp;
+        }
+    }
+    return arr;
+}`,
+        image: ''
+    },
+    {
+        id: '20',
+        name: 'Insertion Sort',
+        lang: 'javascript',
+        complexity: 'O(N^2)',
+        category: 'Сортировка',
+        description: 'Эффективна для почти отсортированных массивов или онлайн-потоков данных, где элементы поступают последовательно.',
+        code: `function insertionSort(arr) {
+    let n = arr.length;
+    for (let i = 1; i < n; i++) {
+        let key = arr[i];
+        let j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            j--;
+        }
+        arr[j + 1] = key;
+    }
+    return arr;
+}`,
+        image: ''
+    },
+    {
+        id: '21',
+        name: 'Counting Sort',
+        lang: 'javascript',
+        complexity: 'O(N + K)',
+        category: 'Сортировка',
+        description: 'Позволяет отсортировать массив целых чисел за линейное время, если диапазон значений (K) заранее ограничен.',
+        code: `function countingSort(arr, maxVal) {
+    let count = new Array(maxVal + 1).fill(0);
+    for (let i = 0; i < arr.length; i++) {
+        count[arr[i]]++;
+    }
+    let idx = 0;
+    for (let val = 0; val <= maxVal; val++) {
+        while (count[val] > 0) {
+            arr[idx++] = val;
+            count[val]--;
+        }
+    }
+    return arr;
+}`,
+        image: ''
+    },
+    {
+        id: '22',
+        name: 'Merge Sorted Arrays',
+        lang: 'javascript',
+        complexity: 'O(N + M)',
+        category: 'Массивы',
+        description: 'Базовый шаг сортировки слиянием. Объединяет два готовых упорядоченных массива в один без повторной сортировки.',
+        code: `function mergeSortedArrays(a, b) {
+    let result = [];
+    let i = 0, j = 0;
+    while (i < a.length && j < b.length) {
+        if (a[i] <= b[j]) {
+            result.push(a[i++]);
+        } else {
+            result.push(b[j++]);
+        }
+    }
+    while (i < a.length) result.push(a[i++]);
+    while (j < b.length) result.push(b[j++]);
+    return result;
+}`,
+        image: ''
+    },
+    {
+        id: '23',
+        name: 'Remove Duplicates',
+        lang: 'javascript',
+        complexity: 'O(N)',
+        category: 'Массивы',
+        description: 'Используется для фильтрации повторяющихся элементов на основе хеш-таблицы без изменения порядка уникальных значений.',
+        code: `function removeDuplicates(arr) {
+    let seen = {};
+    let unique = [];
+    for (let i = 0; i < arr.length; i++) {
+        let item = arr[i];
+        if (!seen[item]) {
+            seen[item] = true;
+            unique.push(item);
+        }
+    }
+    return unique;
+}`,
+        image: ''
+    },
+    {
+        id: '24',
+        name: 'Rotate Array',
+        lang: 'javascript',
+        complexity: 'O(N)',
+        category: 'Массивы',
+        description: 'Используется в буферах обмена, каруселях интерфейсов и криптографических операциях перестановки элементов на K позиций.',
+        code: `function rotateArray(arr, k) {
+    let n = arr.length;
+    if (n === 0) return arr;
+    k = k % n;
+    function reverse(l, r) {
+        while (l < r) {
+            let temp = arr[l];
+            arr[l] = arr[r];
+            arr[r] = temp;
+            l++;
+            r--;
+        }
+    }
+    reverse(0, n - 1);
+    reverse(0, k - 1);
+    reverse(k, n - 1);
+    return arr;
+}`,
+        image: ''
+    },
+    {
+        id: '25',
+        name: 'Find Second Largest',
+        lang: 'javascript',
+        complexity: 'O(N)',
+        category: 'Массивы',
+        description: 'Позволяет найти претендента на второе место (ранжирование участников) за один проход без полной сортировки массива.',
+        code: `function findSecondLargest(arr) {
+    if (arr.length < 2) return null;
+    let first = -Infinity, second = -Infinity;
+    for (let i = 0; i < arr.length; i++) {
+        if (arr[i] > first) {
+            second = first;
+            first = arr[i];
+        } else if (arr[i] > second && arr[i] !== first) {
+            second = arr[i];
+        }
+    }
+    return second === -Infinity ? null : second;
+}`,
+        image: ''
+    },
+    {
+        id: '26',
+        name: 'Character Frequency',
+        lang: 'javascript',
+        complexity: 'O(N)',
+        category: 'Строки',
+        description: 'Используется для подсчета встречаемости символов при сжатии данных (Хаффман), анализе текста и проверке анаграмм.',
+        code: `function getCharacterFrequency(str) {
+    let freq = {};
+    for (let i = 0; i < str.length; i++) {
+        let char = str[i];
+        freq[char] = (freq[char] || 0) + 1;
+    }
+    return freq;
+}`,
+        image: ''
+    },
+    {
+        id: '27',
+        name: 'Anagram Check',
+        lang: 'javascript',
+        complexity: 'O(N)',
+        category: 'Строки',
+        description: 'Применяется для проверки, составлены ли два слова из одного и того же набора букв с одинаковым количеством повторений.',
+        code: `function isAnagram(s1, s2) {
+    if (s1.length !== s2.length) return false;
+    let count = {};
+    for (let i = 0; i < s1.length; i++) {
+        count[s1[i]] = (count[s1[i]] || 0) + 1;
+        count[s2[i]] = (count[s2[i]] || 0) - 1;
+    }
+    for (let key in count) {
+        if (count[key] !== 0) return false;
+    }
+    return true;
+}`,
+        image: ''
+    },
+    {
+        id: '28',
+        name: 'Reverse Words',
+        lang: 'javascript',
+        complexity: 'O(N)',
+        category: 'Строки',
+        description: 'Используется при форматировании предложений и парсинге текстовых команд с сохранением содержимого самих слов.',
+        code: `function reverseWords(sentence) {
+    let words = sentence.trim().split(/\\s+/);
+    let left = 0, right = words.length - 1;
+    while (left < right) {
+        let temp = words[left];
+        words[left] = words[right];
+        words[right] = temp;
+        left++;
+        right--;
+    }
+    return words.join(" ");
+}`,
+        image: ''
+    },
+    {
+        id: '29',
+        name: 'Valid Parentheses',
+        lang: 'javascript',
+        complexity: 'O(N)',
+        category: 'Структуры данных',
+        description: 'Применяется в компиляторах и редакторах кода для валидации корректности открывающих и закрывающих скобок через стек.',
+        code: `function isValidParentheses(s) {
+    let stack = [];
+    let map = { ')': '(', '}': '{', ']': '[' };
+    for (let i = 0; i < s.length; i++) {
+        let c = s[i];
+        if (c === '(' || c === '{' || c === '[') {
+            stack.push(c);
+        } else if (c === ')' || c === '}' || c === ']') {
+            if (stack.length === 0 || stack.pop() !== map[c]) {
+                return false;
+            }
+        }
+    }
+    return stack.length === 0;
+}`,
+        image: ''
+    },
+    {
+        id: '30',
+        name: 'Stack',
+        lang: 'javascript',
+        complexity: 'O(1)',
+        category: 'Структуры данных',
+        description: 'Организует доступ по принципу LIFO (последним пришел - первым ушел) для истории действий, отмены (Undo) и рекурсивных вызовов.',
+        code: `class Stack {
+    constructor() {
+        this.items = [];
+    }
+    push(item) {
+        this.items.push(item);
+    }
+    pop() {
+        return this.items.length === 0 ? null : this.items.pop();
+    }
+    peek() {
+        return this.items.length === 0 ? null : this.items[this.items.length - 1];
+    }
+    isEmpty() {
+        return this.items.length === 0;
+    }
+}`,
+        image: ''
+    },
+    {
+        id: '31',
+        name: 'Queue',
+        lang: 'javascript',
+        complexity: 'O(1)',
+        category: 'Структуры данных',
+        description: 'Организует доступ по принципу FIFO (первым пришел - первым ушел) для очередей задач, печати и обхода графов в ширину.',
+        code: `class Queue {
+    constructor() {
+        this.items = [];
+        this.head = 0;
+    }
+    enqueue(item) {
+        this.items.push(item);
+    }
+    dequeue() {
+        if (this.head >= this.items.length) return null;
+        let item = this.items[this.head];
+        this.head++;
+        return item;
+    }
+    isEmpty() {
+        return this.head >= this.items.length;
+    }
+}`,
+        image: ''
+    },
+    {
+        id: '32',
+        name: 'Run-Length Encoding (RLE)',
+        lang: 'javascript',
+        complexity: 'O(N)',
+        category: 'Строки',
+        description: 'Алгоритм RLE (Run-Length Encoding). Заменяет цепочки повторяющихся символов на символ и число повторов для сжатия данных.',
+        code: `function compressString(s) {
+    if (!s) return "";
+    let res = "";
+    let count = 1;
+    for (let i = 0; i < s.length; i++) {
+        if (i + 1 < s.length && s[i] === s[i + 1]) {
+            count++;
+        } else {
+            res += s[i] + count;
+            count = 1;
+        }
+    }
+    return res.length < s.length ? res : s;
+}`,
+        image: ''
+    },
+    {
+        id: '33',
+        name: 'Prefix Sums 1D',
+        lang: 'javascript',
+        complexity: 'O(1) запрос',
+        category: 'Массивы',
+        description: 'Позволяет мгновенно отвечать на запросы о сумме элементов на любом подотрезке [L, R] после быстрого предподсчета.',
+        code: `class PrefixSums {
+    constructor(arr) {
+        this.pref = new Array(arr.length + 1).fill(0);
+        for (let i = 0; i < arr.length; i++) {
+            this.pref[i + 1] = this.pref[i] + arr[i];
+        }
+    }
+    getSum(l, r) {
+        return this.pref[r + 1] - this.pref[l];
+    }
+}`,
+        image: ''
+    },
+    {
+        id: '34',
+        name: 'Linear Interpolation (Lerp)',
+        lang: 'javascript',
+        complexity: 'O(1)',
+        category: 'Математика',
+        description: 'Формула Lerp. Применяется в компьютерной графике и анимации для плавного перехода между двумя числовыми состояниями.',
+        code: `function lerp(start, end, t) {
+    return start + (end - start) * Math.max(0, Math.min(1, t));
+}`,
+        image: ''
+    },
+    {
+        id: '35',
+        name: 'Quick Sort',
+        lang: 'cpp',
+        complexity: 'O(N log N)',
+        category: 'Сортировка',
+        description: 'Используется как стандартная универсальная сортировка большинства стандартных библиотек благодаря высокой скорости в памяти.',
+        code: `void quickSort(std::vector<int>& arr, int l, int r) {
+    if (l >= r) return;
+    int mid = arr[l + (r - l) / 2];
+    int i = l, j = r;
+    while (i <= j) {
+        while (arr[i] < mid) i++;
+        while (arr[j] > mid) j--;
+        if (i <= j) {
+            std::swap(arr[i], arr[j]);
+            i++;
+            j--;
+        }
+    }
+    quickSort(arr, l, j);
+    quickSort(arr, i, r);
+}`,
+        image: ''
+    },
+    {
+        id: '36',
+        name: 'Merge Sort',
+        lang: 'cpp',
+        complexity: 'O(N log N)',
+        category: 'Сортировка',
+        description: 'Гарантирует время O(N log N) в худшем случае и является устойчивой (сохраняет относительный порядок одинаковых ключей).',
+        code: `void merge(std::vector<int>& arr, int l, int m, int r) {
+    std::vector<int> left(arr.begin() + l, arr.begin() + m + 1);
+    std::vector<int> right(arr.begin() + m + 1, arr.begin() + r + 1);
+    int i = 0, j = 0, k = l;
+    while (i < (int)left.size() && j < (int)right.size()) {
+        if (left[i] <= right[j]) arr[k++] = left[i++];
+        else arr[k++] = right[j++];
+    }
+    while (i < (int)left.size()) arr[k++] = left[i++];
+    while (j < (int)right.size()) arr[k++] = right[j++];
+}
+
+void mergeSort(std::vector<int>& arr, int l, int r) {
+    if (l >= r) return;
+    int m = l + (r - l) / 2;
+    mergeSort(arr, l, m);
+    mergeSort(arr, m + 1, r);
+    merge(arr, l, m, r);
+}`,
+        image: ''
+    },
+    {
+        id: '37',
+        name: 'Ternary Search',
+        lang: 'cpp',
+        complexity: 'O(log N)',
+        category: 'Поиск',
+        description: 'Применяется для поиска точки оптимума (максимума или минимума) унимодальной функции без вычисления производных.',
+        code: `double ternarySearch(double l, double r, double eps, double (*f)(double)) {
+    while (r - l > eps) {
+        double m1 = l + (r - l) / 3.0;
+        double m2 = r - (r - l) / 3.0;
+        if (f(m1) < f(m2)) l = m1;
+        else r = m2;
+    }
+    return (l + r) / 2.0;
+}`,
+        image: ''
+    },
+    {
+        id: '38',
+        name: 'Two Sum Sorted',
+        lang: 'cpp',
+        complexity: 'O(N)',
+        category: 'Массивы',
+        description: 'Находит пару слагаемых для целевой суммы в отсортированном массиве без квадратичного перебора вложенными циклами.',
+        code: `bool twoSumSorted(const std::vector<int>& arr, int target, int& idx1, int& idx2) {
+    int left = 0, right = (int)arr.size() - 1;
+    while (left < right) {
+        int sum = arr[left] + arr[right];
+        if (sum == target) {
+            idx1 = left;
+            idx2 = right;
+            return true;
+        } else if (sum < target) {
+            left++;
+        } else {
+            right--;
+        }
+    }
+    return false;
+}`,
+        image: ''
+    },
+    {
+        id: '39',
+        name: 'Sliding Window Maximum Sum',
+        lang: 'cpp',
+        complexity: 'O(N)',
+        category: 'Массивы',
+        description: 'Находит максимальную сумму подмассива фиксированного размера K за счет добавления правого и вычитания левого элементов.',
+        code: `int maxSubarraySumK(const std::vector<int>& arr, int k) {
+    int n = arr.size();
+    if (n < k) return 0;
+    int windowSum = 0;
+    for (int i = 0; i < k; i++) windowSum += arr[i];
+    int maxSum = windowSum;
+    for (int i = k; i < n; i++) {
+        windowSum += arr[i] - arr[i - k];
+        maxSum = std::max(maxSum, windowSum);
+    }
+    return maxSum;
+}`,
+        image: ''
+    },
+    {
+        id: '40',
+        name: 'Kadane Algorithm',
+        lang: 'cpp',
+        complexity: 'O(N)',
+        category: 'Динамическое программирование',
+        description: 'Находит непрерывный подмассив с наибольшей суммой элементов в одномерном массиве за один линейный проход.',
+        code: `int maxSubArray(const std::vector<int>& arr) {
+    int maxSoFar = arr[0];
+    int currMax = arr[0];
+    for (size_t i = 1; i < arr.size(); i++) {
+        currMax = std::max(arr[i], currMax + arr[i]);
+        maxSoFar = std::max(maxSoFar, currMax);
+    }
+    return maxSoFar;
+}`,
+        image: ''
+    },
+    {
+        id: '41',
+        name: 'Floyd Cycle Detection',
+        lang: 'cpp',
+        complexity: 'O(N)',
+        category: 'Структуры данных',
+        description: 'Алгоритм черепахи и зайца. Выявляет зацикливания в односвязных структурах данных без хранения посещенных адресов.',
+        code: `struct ListNode {
+    int val;
+    ListNode *next;
+    ListNode(int x) : val(x), next(nullptr) {}
+};
+
+bool hasCycle(ListNode *head) {
+    if (!head || !head->next) return false;
+    ListNode *slow = head;
+    ListNode *fast = head->next;
+    while (slow != fast) {
+        if (!fast || !fast->next) return false;
+        slow = slow->next;
+        fast = fast->next->next;
+    }
+    return true;
+}`,
+        image: ''
+    },
+    {
+        id: '42',
+        name: 'Depth First Search (DFS)',
+        lang: 'cpp',
+        complexity: 'O(V + E)',
+        category: 'Графы',
+        description: 'Используется для исследования лабиринтов, поиска компонент связности и проверки достижимости целевой вершины.',
+        code: `void dfs(int v, const std::vector<std::vector<int>>& adj, std::vector<bool>& visited) {
+    visited[v] = true;
+    for (int u : adj[v]) {
+        if (!visited[u]) {
+            dfs(u, adj, visited);
+        }
+    }
+}`,
+        image: ''
+    },
+    {
+        id: '43',
+        name: 'Breadth First Search (BFS)',
+        lang: 'cpp',
+        complexity: 'O(V + E)',
+        category: 'Графы',
+        description: 'Находит кратчайший путь в невзвешенных графах (по минимальному количеству ребер/шагов между вершинами).',
+        code: `std::vector<int> bfs(int start, const std::vector<std::vector<int>>& adj) {
+    int n = adj.size();
+    std::vector<int> dist(n, -1);
+    std::queue<int> q;
+    dist[start] = 0;
+    q.push(start);
+    while (!q.empty()) {
+        int v = q.front();
+        q.pop();
+        for (int u : adj[v]) {
+            if (dist[u] == -1) {
+                dist[u] = dist[v] + 1;
+                q.push(u);
+            }
+        }
+    }
+    return dist;
+}`,
+        image: ''
+    },
+    {
+        id: '44',
+        name: 'Bipartite Graph Check',
+        lang: 'cpp',
+        complexity: 'O(V + E)',
+        category: 'Графы',
+        description: 'Применяется для разбиения множества объектов на две неконфликтующие группы (задача раскраски в 2 цвета).',
+        code: `bool isBipartite(const std::vector<std::vector<int>>& adj) {
+    int n = adj.size();
+    std::vector<int> color(n, -1);
+    for (int i = 0; i < n; i++) {
+        if (color[i] != -1) continue;
+        std::queue<int> q;
+        color[i] = 0;
+        q.push(i);
+        while (!q.empty()) {
+            int v = q.front();
+            q.pop();
+            for (int to : adj[v]) {
+                if (color[to] == -1) {
+                    color[to] = 1 - color[v];
+                    q.push(to);
+                } else if (color[to] == color[v]) {
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}`,
+        image: ''
+    },
+    {
+        id: '45',
+        name: 'Topological Sort',
+        lang: 'cpp',
+        complexity: 'O(V + E)',
+        category: 'Графы',
+        description: 'Строит правильный порядок выполнения зависимых задач, сборки пакетов проектов и учебных курсов в DAG графах.',
+        code: `std::vector<int> topologicalSort(int n, const std::vector<std::vector<int>>& adj) {
+    std::vector<int> inDegree(n, 0), order;
+    for (int i = 0; i < n; i++) {
+        for (int to : adj[i]) inDegree[to]++;
+    }
+    std::queue<int> q;
+    for (int i = 0; i < n; i++) {
+        if (inDegree[i] == 0) q.push(i);
+    }
+    while (!q.empty()) {
+        int v = q.front();
+        q.pop();
+        order.push_back(v);
+        for (int to : adj[v]) {
+            if (--inDegree[to] == 0) q.push(to);
+        }
+    }
+    return order.size() == (size_t)n ? order : std::vector<int>();
+}`,
+        image: ''
+    },
+    {
+        id: '46',
+        name: 'Dijkstra Algorithm',
+        lang: 'cpp',
+        complexity: 'O(E log V)',
+        category: 'Графы',
+        description: 'Используется в GPS-навигаторах и маршрутизации сетей для нахождения кратчайшего пути при неотрицательных весах ребер.',
+        code: `std::vector<long long> dijkstra(int start, const std::vector<std::vector<std::pair<int, int>>>& adj) {
+    int n = adj.size();
+    std::vector<long long> dist(n, 1e18);
+    std::priority_queue<std::pair<long long, int>, std::vector<std::pair<long long, int>>, std::greater<>> pq;
+    dist[start] = 0;
+    pq.push({0, start});
+    while (!pq.empty()) {
+        auto [d, v] = pq.top();
+        pq.pop();
+        if (d > dist[v]) continue;
+        for (auto& edge : adj[v]) {
+            int to = edge.first, w = edge.second;
+            if (dist[v] + w < dist[to]) {
+                dist[to] = dist[v] + w;
+                pq.push({dist[to], to});
+            }
+        }
+    }
+    return dist;
+}`,
+        image: ''
+    },
+    {
+        id: '47',
+        name: 'Disjoint Set Union (DSU)',
+        lang: 'cpp',
+        complexity: 'O(alpha(N))',
+        category: 'Структуры данных',
+        description: 'Структура данных DSU. Быстро объединяет группы объектов и проверяет принадлежность элементов одной сети/кластеру.',
+        code: `struct DSU {
+    std::vector<int> parent;
+    DSU(int n) : parent(n) {
+        for (int i = 0; i < n; i++) parent[i] = i;
+    }
+    int find(int v) {
+        return parent[v] == v ? v : parent[v] = find(parent[v]);
+    }
+    bool unite(int a, int b) {
+        a = find(a);
+        b = find(b);
+        if (a != b) {
+            parent[b] = a;
+            return true;
+        }
+        return false;
+    }
+};`,
+        image: ''
+    },
+    {
+        id: '48',
+        name: 'Next Permutation',
+        lang: 'cpp',
+        complexity: 'O(N)',
+        category: 'Комбинаторика',
+        description: 'Генерирует следующую лексикографическую перестановку элементов (полный перебор вариантов и решение задачи коммивояжера).',
+        code: `bool nextPermutation(std::vector<int>& arr) {
+    int n = arr.size();
+    int i = n - 2;
+    while (i >= 0 && arr[i] >= arr[i + 1]) i--;
+    if (i < 0) {
+        std::reverse(arr.begin(), arr.end());
+        return false;
+    }
+    int j = n - 1;
+    while (arr[j] <= arr[i]) j--;
+    std::swap(arr[i], arr[j]);
+    std::reverse(arr.begin() + i + 1, arr.end());
+    return true;
+}`,
+        image: ''
+    },
+    {
+        id: '49',
+        name: 'Euclidean Distance',
         lang: 'cpp',
         complexity: 'O(1)',
-        category: 'Массивы',
-        description: 'Сумма на любом подотрезке за O(1)',
-        code: `std::vector<long long> buildPrefixSums(const std::vector<int>& arr) {\n    int n = arr.size();\n    std::vector<long long> pref(n + 1, 0);\n    for (int i = 0; i < n; i++) {\n        pref[i + 1] = pref[i] + arr[i];\n    }\n    return pref;\n}\n\nlong long getRangeSum(const std::vector<long long>& pref, int l, int r) {\n    return pref[r + 1] - pref[l];\n}`,
+        category: 'Геометрия',
+        description: 'Находит геометрическое расстояние по прямой между двумя точками на плоскости по теореме Пифагора.',
+        code: `double euclideanDistance(double x1, double y1, double x2, double y2) {
+    double dx = x2 - x1;
+    double dy = y2 - y1;
+    return std::sqrt(dx * dx + dy * dy);
+}`,
+        image: ''
+    },
+    {
+        id: '50',
+        name: 'Triangle Area by Coordinates',
+        lang: 'cpp',
+        complexity: 'O(1)',
+        category: 'Геометрия',
+        description: 'Метод косого (векторного) произведения. Вычисляет площадь треугольника на координатной сетке без нахождения высоты.',
+        code: `double triangleArea(double x1, double y1, double x2, double y2, double x3, double y3) {
+    return std::abs((x2 - x1) * (y3 - y1) - (x3 - x1) * (y2 - y1)) / 2.0;
+}`,
         image: ''
     }
 ];
 
 function activate(context) {
+    context.globalState.update('algorithms', INITIAL_ALGOS);
+    context.globalState.update('algo_db_version', 99);
+
     const CURRENT_VERSION = 3;
     const savedVersion = context.globalState.get('algo_db_version', 0);
     if (savedVersion < CURRENT_VERSION) {
