@@ -35,7 +35,7 @@
 ### Запуск в режиме отладки
 1. Клонируйте репозиторий:
    ```bash
-   git clone 
+   git clone https://github.com/ValademerRTS/Algo-Studio.git
    cd algo-studio
    
 2. Откройте проект в VS Code:
